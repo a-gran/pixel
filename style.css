@@ -117,7 +117,7 @@ body {
     transform: scale(1);
 }
 
-.range-group {
+/* .range-group {
     display: flex;
     justify-content: center;
 }
@@ -126,4 +126,4 @@ body {
 .width-input {
     writing-mode: vertical-lr;
     direction: rtl;
-}
+} */

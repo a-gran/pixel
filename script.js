@@ -89,7 +89,7 @@ cells.forEach(cell => {
                 duration: 500, // Длительность анимации
                 delay: anime.stagger(50, {grid: [30, 15], from: cell_id}), // Задержка анимации
             })
-            cells.forEach(c => c.dataset.color = CURRENT_COLORCODE) // Обновляем код цвета для всех клеток
+            cells.forEach(cell => cell.dataset.color = CURRENT_COLORCODE) // Обновляем код цвета для всех клеток
         } else {
             // Если режим заливки не активен, закрашиваем только текущую клетку
             anime({
@@ -136,9 +136,7 @@ document.querySelector('.fill-tool').addEventListener('click', () => {
 setInterval(() => {
     let result = '' // Строка для хранения результата
     let temp_cells = document.querySelectorAll('.cell') // Получаем все клетки
-    temp_cells.forEach(cell => {
-        result += `${cell.dataset.color}` // Добавляем код цвета каждой клетки
-    })
+    temp_cells.forEach(cell => result += `${cell.dataset.color}`) // Добавляем код цвета каждой клетки
     document.cookie = `pixel-result=${result};max-age=100000` // Сохраняем в cookie
     console.log(document.cookie) // Логируем для проверки
 }, 60000)

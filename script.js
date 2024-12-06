@@ -1,153 +1,171 @@
-// Функция для загрузки результата из cookie
+// Подгрузка из cookie
 function get_result_from_cookie() {
-    // Получаем все cookie в виде строки, разделяем их на массив пар "ключ=значение"
     let cookies = document.cookie.split('; ')
-    console.log(cookies) // Логируем полученные cookie для проверки
-    // Перебираем все cookie
+    console.log(cookies)
     for (let i = 0; i < cookies.length; i += 1) {
-        // Разделяем каждую пару "ключ=значение" на отдельные элементы
         let cookie = cookies[i].split('=')
-        console.log(cookie) // Логируем текущую пару для проверки
-        // Если текущий cookie имеет ключ 'pixel-result', возвращаем его значение
-        if (cookie[0] == 'pixel-result') return cookie[1]
+        console.log(cookie)
+        if (cookie[0] == 'pixel-result') {
+            return cookie[1]
+        }
     }
-    // Если cookie не найден, возвращаем строку из 450 нулей
     return '0' * 450
 }
 
-// Глобальные переменные для хранения состояния
-let IS_CLICKED = false // Флаг: нажата ли кнопка мыши
-// Текущий цвет кисти из CSS-переменной
-let CURRENT_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--current-color')
-let CURRENT_COLORCODE = "1" // Код текущего цвета (число как строка)
-// Цвет по умолчанию из CSS-переменной
-let DEFAULT_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--default-color')
-let FILL_MODE = false // Флаг: активен ли режим заливки
-// Массив доступных цветов (как строковые значения RGB)
-let COLORS = ['rgb(62, 62, 62)', 'rgb(255, 102, 46)', 
-              'rgb(26, 218, 84)', 'rgb(83, 15, 255)', 
-              'rgb(255, 236, 26)', 'rgb(142, 229, 255)']
+// Флаги и дефолтные значения
+var IS_CLICKED = false
+var CURRENT_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--current-color');
+var CURRENT_COLORCODE = "1"
+var DEFAULT_COLOR = getComputedStyle(document.documentElement).getPropertyValue('--default-color');
+var FILL_MODE = false
+var COLORS = ['rgb(62, 62, 62)', 'rgb(255, 102, 46)', 'rgb(26, 218, 84)', 'rgb(83, 15, 255)', 'rgb(255, 236, 26)', 'rgb(142, 229, 255)']
 
-// Обработка событий мыши для изменения флага IS_CLICKED
-document.addEventListener('mousedown', () => IS_CLICKED = true) // Устанавливаем true при нажатии кнопки мыши
-document.addEventListener('mouseup', () => IS_CLICKED = false) // Устанавливаем false при отпускании кнопки мыши
+// Изменение флага "кнопка мыши опущена"
+document.addEventListener('mousedown', function() {
+    IS_CLICKED = true;
+})
 
-// Создаём игровое поле
-let field = document.querySelector('.field') // Получаем элемент поля из DOM
-let temp_result = get_result_from_cookie() // Получаем сохранённое состояние из cookie
-console.log('temp-result', temp_result) // Логируем состояние для проверки
+document.addEventListener('mouseup', function() {
+    IS_CLICKED = false;
+})
 
-// Если в cookie есть данные, восстанавливаем их
+// Заполняем поле таким количеством клеток, сколько предусмотрено в grid-е
+let field = document.querySelector('.field')
+let temp_result = get_result_from_cookie()
+console.log('temp-result', temp_result)
 if (temp_result != '0') {
-    for (let i = 0; i < 450; i += 1) {
-        let cell = document.createElement('div') // Создаём новый элемент div для клетки
-        cell.classList.add('cell') // Добавляем класс cell
-        cell.setAttribute('id', `${i}`) // Устанавливаем уникальный ID для клетки
-        cell.dataset.color = temp_result[i] // Сохраняем код цвета клетки в data-атрибут
-        cell.style.backgroundColor = COLORS[parseInt(temp_result[i])] // Устанавливаем цвет клетки из массива COLORS
-        field.appendChild(cell) // Добавляем клетку в поле
+    for (let i = 0; i < 450; i+=1) {
+        let cell = document.createElement('div')
+        cell.classList.add('cell')
+        // ID пригодится в качестве параметра точки отсчёта радиальной анимации заливки
+        cell.setAttribute('id', `${i}`)
+        cell.dataset.color = temp_result[i]
+        cell.style.backgroundColor = COLORS[parseInt(temp_result[i])]
+        field.appendChild(cell)
     }
 } else {
-    // Если данных нет, создаём клетки с цветом по умолчанию
-    for (let i = 0; i < 450; i += 1) {
-        let cell = document.createElement('div') // Создаём новый элемент div
-        cell.classList.add('cell') // Добавляем класс cell
-        cell.setAttribute('id', `${i}`) // Устанавливаем уникальный ID
-        cell.dataset.color = '0' // Устанавливаем код цвета по умолчанию
-        cell.style.backgroundColor = COLORS[0] // Цвет по умолчанию — первый цвет из массива
-        field.appendChild(cell) // Добавляем клетку в поле
+    for (let i = 0; i < 450; i+=1) {
+        let cell = document.createElement('div')
+        cell.classList.add('cell')
+        // ID пригодится в качестве параметра точки отсчёта радиальной анимации заливки
+        cell.setAttribute('id', `${i}`)
+        cell.dataset.color = '0'
+        cell.style.backgroundColor = COLORS[0]
+        field.appendChild(cell)
     }
 }
 
-// Добавляем обработчики событий для клеток
-let cells = document.querySelectorAll('.cell') // Получаем все клетки из DOM
+// Каждой ячейке в рабочей области добавляем обработчики событий
+let cells = document.querySelectorAll('.cell')
 cells.forEach(cell => {
-    // При наведении на клетку
-    cell.addEventListener('mouseover', () => {
-        // Если кнопка мыши зажата, закрашиваем клетку
+    cell.addEventListener('mouseover', function() {
+        // Клетка будет закрашиваться при наведении на неё курсора мыши, если до этого кнопка мыши была зажата
         if (IS_CLICKED) {
-            anime({ // Анимация закрашивания
-                targets: cell, // Целевая клетка
-                background: CURRENT_COLOR, // Устанавливаем цвет из CURRENT_COLOR
-                duration: 200, // Длительность анимации
-                easing: 'linear' // Линейное ускорение
+            anime({
+                targets: cell,
+                background: CURRENT_COLOR,
+                duration: 200,
+                easing: 'linear'
             })
-            cell.dataset.color = CURRENT_COLORCODE // Сохраняем код цвета клетки
+            cell.dataset.color = CURRENT_COLORCODE
         }
     })
     
-    // При нажатии на клетку
-    cell.addEventListener('mousedown', () => {
+    cell.addEventListener('mousedown', function() {
+        // Если до этого была нажата кнопка "заливка", то значение флага меняется и условный оператор заходит в ветку с кодом заливки.
         if (FILL_MODE) {
-            // Если активен режим заливки
-            let cell_id = parseInt(cell.getAttribute('id')) // Получаем ID клетки
-            FILL_MODE = !FILL_MODE // Деактивируем режим заливки
-            anime({ // Анимация заливки
-                targets: '.cell', // Все клетки
-                background: CURRENT_COLOR, // Устанавливаем цвет из CURRENT_COLOR
-                easing: 'easeInOutQuad', // Плавное ускорение
-                duration: 500, // Длительность анимации
-                delay: anime.stagger(50, {grid: [30, 15], from: cell_id}), // Задержка анимации
-            })
-            cells.forEach(cell => cell.dataset.color = CURRENT_COLORCODE) // Обновляем код цвета для всех клеток
-        } else {
-            // Если режим заливки не активен, закрашиваем только текущую клетку
+            let cell_id = parseInt(cell.getAttribute('id'))
+            FILL_MODE = !FILL_MODE
             anime({
-                targets: cell, // Текущая клетка
-                background: CURRENT_COLOR, // Цвет из CURRENT_COLOR
-                duration: 500, // Длительность анимации
-                easing: 'easeInOutQuad' // Плавное ускорение
+                targets: '.cell',
+                background: CURRENT_COLOR,
+                easing: 'easeInOutQuad',
+                duration: 500,
+                delay: anime.stagger(50, {grid: [30, 15], from: cell_id}),
             })
-            cell.dataset.color = CURRENT_COLORCODE // Обновляем код цвета клетки
+            for (let i = 0; i < cells.length; i += 1) {
+                cells[i].dataset.color = CURRENT_COLORCODE
+            }
+        } else {
+            // Если находимся не в режиме заливки, клетка просто закрасится
+            anime({
+                targets: cell,
+                background: CURRENT_COLOR,
+                duration: 500,
+                easing: 'easeInOutQuad'
+            })
+            cell.dataset.color = CURRENT_COLORCODE
         }
     })
 })
 
-// Обработчики для выбора цвета
-let color_cells = document.querySelectorAll('.color-cell') // Получаем элементы цветовой палитры
+// Выбор цвета
+let color_cells = document.querySelectorAll('.color-cell')
 color_cells.forEach(color_cell => {
-    color_cell.addEventListener('click', () => {
-        FILL_MODE = false // Деактивируем режим заливки
-        CURRENT_COLOR = getComputedStyle(color_cell).backgroundColor; // Устанавливаем цвет из выбранной ячейки
-        CURRENT_COLORCODE = color_cell.dataset.colorcode // Код цвета из data-атрибута
-        document.documentElement.style.cssText = `--current-color: ${CURRENT_COLOR}` // Обновляем CSS-переменную
-        document.querySelector('.selected').classList.remove('selected') // Убираем выделение с предыдущей ячейки
-        color_cell.classList.add('selected') // Добавляем выделение текущей ячейке
+    color_cell.addEventListener('click', function() {
+        // Если вдруг был включен режим заливки, из него нужно выйти, если пользователь выбрал цвет.
+        FILL_MODE = false
+        // Значение цвета получаем непосредственно из значения свойства background у ячейки с цветом в палитре
+        // И сохраняем в глобальную переменную, чтобы в любой момент можно было получить текущий цвет для других задач.
+        CURRENT_COLOR = getComputedStyle(color_cell).backgroundColor;
+        CURRENT_COLORCODE = color_cell.dataset.colorcode
+
+        // Это интересный способ настроить передачу значения из JS в CSS. Теперь при наведении мыши на ячейку,
+        // любая ячейка будет получать значение CSS-переменной с цветом как значение свойства background
+        document.documentElement.style.cssText = `--current-color: ${CURRENT_COLOR}`
+        document.querySelector('.selected').classList.remove('selected')
+        color_cell.classList.add('selected')
     })
 })
 
-// Обработчик для ластика
-document.querySelector('.eraser').addEventListener('click', () => {
-    CURRENT_COLOR = DEFAULT_COLOR // Устанавливаем цвет по умолчанию
-    CURRENT_COLORCODE = "0" // Код цвета для ластика    
-    document.documentElement.style.cssText = `--current-color: ${CURRENT_COLOR}` // Обновляем CSS-переменную
-    document.querySelector('.selected').classList.remove('selected') // Убираем выделение с других инструментов
-    this.classList.add('selected') // Выделяем инструмент ластика
+// Отдельный обработчик для ластика и заливки, потому что это не color-cell, а tool-cell.
+document.querySelector('.eraser').addEventListener('click', function() {
+    // В CSS-переменной сохранён код цвета по умолчанию, чтобы избежать дублирования значений в CSS и в JS.
+    // В самом начале он подтягивается в DEFAULT_COLOR
+    CURRENT_COLOR = DEFAULT_COLOR
+    CURRENT_COLORCODE = "0"
+    // По сути, стёрка - то же самое, что и рисование, просто цвет совпадает с цветом фона
+    document.documentElement.style.cssText = `--current-color: ${CURRENT_COLOR}`
+
+    document.querySelector('.selected').classList.remove('selected')
+    this.classList.add('selected')
 })
 
-// Обработчик для инструмента заливки
-document.querySelector('.fill-tool').addEventListener('click', () => {
-    FILL_MODE = !FILL_MODE // Переключаем режим заливки
-    document.querySelector('.selected').classList.remove('selected') // Убираем выделение с других инструментов
-    this.classList.add('selected') // Выделяем инструмент заливки
+// Обработчик инструмента заливки.
+document.querySelector('.fill-tool').addEventListener('click', function() {
+    FILL_MODE = !FILL_MODE
+    document.querySelector('.selected').classList.remove('selected')
+    this.classList.add('selected')
 })
 
-// Сохранение состояния поля в cookie каждую минуту
-setInterval(() => {
-    let result = '' // Строка для хранения результата
-    let temp_cells = document.querySelectorAll('.cell') // Получаем все клетки
-    temp_cells.forEach(cell => result += `${cell.dataset.color}`) // Добавляем код цвета каждой клетки
-    document.cookie = `pixel-result=${result};max-age=100000` // Сохраняем в cookie
-    console.log(document.cookie) // Логируем для проверки
+// Сохранение в cookie каждую минуту
+setInterval(function() {
+    result = ''
+    let temp_cells = document.querySelectorAll('.cell')
+    for (let i = 0; i < temp_cells.length; i += 1) {
+        result += `${temp_cells[i].dataset.color}`
+    }
+    
+    document.cookie = `pixel-result=${result};max-age=100000`
+    console.log(document.cookie)
+    
 }, 60000)
 
-// Обработчик для сохранения поля в изображение
-document.querySelector('.save-tool').addEventListener('click', () => {
-    domtoimage.toJpeg(field, {quality: 2}) // Генерируем изображение поля
-    .then((dataUrl) => {
-        let link = document.createElement('a') // Создаём ссылку для скачивания
-        link.download = 'pixel.jpg' // Имя файла
-        link.href = dataUrl // Устанавливаем URL изображения
-        link.click() // Инициируем скачивание
-    }).catch((error) => console.error('oops, something went wrong!', error)) // Обрабатываем ошибку
+
+// Сохранение результата на компьютер в виде картинки с помощью dom-to-image
+document.querySelector('.save-tool').addEventListener('click', function() {
+    domtoimage.toJpeg(field, {quality: 2})
+    .then(function (dataUrl) {
+        var img = new Image();
+        img.src = dataUrl;
+        let link = document.createElement('a');
+        link.download = 'pixel.jpg';
+        link.href = dataUrl;
+        link.click();
+    })
+    .catch(function (error) {
+        console.error('oops, something went wrong!', error);
+    });
 })
+
+
